@@ -45,7 +45,9 @@ hparams = {
     # Size of feature maps in discriminator
     'ndf': 64,
     # Number of training epochs
-    'num_epochs': 5,
+    # instead of num_epochs set max_epochs to desired num
+    # pl will run num epochs if criteria of earlyStopping are not met
+    'max_epochs': 5,
     # Learning rate for optimizers
     'lr': 0.0002,
     # Beta1 hyperparam for Adam optimizers
@@ -158,10 +160,12 @@ class DCGan_model(pl.LightningModule):
         # you can save only params that you need:
         # self.save_hyperparameters('num_epochs')
         self.save_hyperparameters(hparams)
-        # after this can access self.hparams.batch_size
-
+        # after this can access things like: self.hparams.batch_size
+        # so the step below is not necessary
+        # self.hparams = hparams
         self.generator = Generator(self.hparams).apply(self.weights_init)
         self.discriminator = Discriminator(self.hparams).apply(self.weights_init)
+        self.fixed_noise = torch.randn(64, self.hparams.nz, 1, 1)
         self.real_label = 1.
         self.fake_label = 0.
 
@@ -235,8 +239,15 @@ class DCGan_model(pl.LightningModule):
             self.log('loss_g', loss_g, on_epoch=True, prog_bar=True)
             return loss_g
 
-    # def training_epoch_end(self):
-    #     pass
+    def on_epoch_end(self):
+        z = self.fixed_noise.type_as(self.generator.main[0].weight)
+        # show sampled images
+        sample_imgs = self(z).detach()
+        plt.imshow(np.transpose(vutils.make_grid(sample_imgs, padding=2, normalize=True), (1, 2, 0)))
+        plt.show()
+        # log sampled images if you specified logger
+        # grid = vutils.make_grid(sample_imgs, padding=2, normalize=True)
+        # self.logger.experiment.add_image('generated_images', grid, self.current_epoch)
 
     def configure_optimizers(self):
         lr = self.hparams.lr
@@ -252,41 +263,6 @@ class DCGan_model(pl.LightningModule):
             nn.init.normal_(m.weight.data, 1.0, 0.02)
             nn.init.constant_(m.bias.data, 0)
 
-
-# plt.figure(figsize=(10,5))
-# plt.title("Generator and Discriminator Loss During Training")
-# plt.plot(G_losses,label="G")
-# plt.plot(D_losses,label="D")
-# plt.xlabel("iterations")
-# plt.ylabel("Loss")
-# plt.legend()
-# plt.show()
-
-
-# #%%capture
-# fig = plt.figure(figsize=(8,8))
-# plt.axis("off")
-# ims = [[plt.imshow(np.transpose(i,(1,2,0)), animated=True)] for i in img_list]
-# ani = animation.ArtistAnimation(fig, ims, interval=1000, repeat_delay=1000, blit=True)
-#
-# HTML(ani.to_jshtml())
-
-# # Grab a batch of real images from the dataloader
-# real_batch = next(iter(dataloader))
-#
-# # Plot the real images
-# plt.figure(figsize=(15,15))
-# plt.subplot(1,2,1)
-# plt.axis("off")
-# plt.title("Real Images")
-# plt.imshow(np.transpose(vutils.make_grid(real_batch[0].to(device)[:64], padding=5, normalize=True).cpu(),(1,2,0)))
-#
-# # Plot the fake images from the last epoch
-# plt.subplot(1,2,2)
-# plt.axis("off")
-# plt.title("Fake Images")
-# plt.imshow(np.transpose(img_list[-1],(1,2,0)))
-# plt.show()
 
 if __name__ == '__main__':
     model = DCGan_model(hparams)
