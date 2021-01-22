@@ -263,14 +263,23 @@ class DCGan_model(pl.LightningModule):
             nn.init.normal_(m.weight.data, 1.0, 0.02)
             nn.init.constant_(m.bias.data, 0)
 
-# TO DO: add dataparallel
 if __name__ == '__main__':
     model = DCGan_model(hparams)
     dm = DCGanDataModule(hparams)
     dm.setup()
     dm.example_show()
-    trainer = pl.Trainer(gpus=hparams['ngpu'],
-                         max_epochs=hparams['max_epochs'],
+    if torch.distributed.is_available():
+        # dataparallel from pytorch:
+        # net = nn.DataParallel(net, list(range(ngpu)))
+        # DP use is discouraged by PyTorch and Lightning. Use DDP which is more stable and at least 3x faster
+        # there are some limitation, check out https://pytorch-lightning.readthedocs.io/en/latest/multi_gpu.html
+        trainer = pl.Trainer(gpus=hparams['ngpu'],
+                             max_epochs=hparams['max_epochs'],
+                             accelerator='ddp'
                          )
+    else:
+        trainer = pl.Trainer(gpus=hparams['ngpu'],
+                             max_epochs=hparams['max_epochs'],
+                             )
     trainer.fit(model, dm)
 
