@@ -3,10 +3,10 @@ beta1: 0.5
 dataroot: celeba
 image_size: 64
 lr: 0.0002
+max_epochs: 5
 nc: 3
 ndf: 64
 ngf: 64
 ngpu: 1
-num_epochs: 5
 nz: 100
 workers: 0
