@@ -226,7 +226,6 @@ class DCGan_model(pl.LightningModule):
         return loss
 
     def training_step(self, training_batch, batch_idx, optimizer_idx):
-        # Format batch
 
         # Generate batch of latent vectors
         if optimizer_idx == 0:
@@ -243,7 +242,7 @@ class DCGan_model(pl.LightningModule):
         z = self.fixed_noise.type_as(self.generator.main[0].weight)
         # show sampled images
         sample_imgs = self(z).detach()
-        plt.imshow(np.transpose(vutils.make_grid(sample_imgs, padding=2, normalize=True).cpu().numpy(), (1, 2, 0)))  # !!!
+        plt.imshow(np.transpose(vutils.make_grid(sample_imgs, padding=2, normalize=True).cpu().numpy(), (1, 2, 0)))
         plt.show()
         # log sampled images if you specified logger
         # grid = vutils.make_grid(sample_imgs, padding=2, normalize=True)
@@ -251,9 +250,9 @@ class DCGan_model(pl.LightningModule):
 
     def configure_optimizers(self):
         lr = self.hparams.lr
-        optimizerD = optim.Adam(self.discriminator.parameters(), lr=lr, betas=(self.hparams.beta1, 0.999))
-        optimizerG = optim.Adam(self.generator.parameters(), lr=lr, betas=(self.hparams.beta1, 0.999))
-        return optimizerD, optimizerG
+        optimizer_d = optim.Adam(self.discriminator.parameters(), lr=lr, betas=(self.hparams.beta1, 0.999))
+        optimizer_g = optim.Adam(self.generator.parameters(), lr=lr, betas=(self.hparams.beta1, 0.999))
+        return optimizer_d, optimizer_g
 
     def weights_init(self, m):
         classname = m.__class__.__name__
@@ -262,6 +261,7 @@ class DCGan_model(pl.LightningModule):
         elif classname.find('BatchNorm') != -1:
             nn.init.normal_(m.weight.data, 1.0, 0.02)
             nn.init.constant_(m.bias.data, 0)
+
 
 if __name__ == '__main__':
     model = DCGan_model(hparams)
