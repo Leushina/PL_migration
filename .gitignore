@@ -1,0 +1,10 @@
+.idea*
+venv*
+__pycache__*
+sari.egg-info*
+*.p
+squad2.0*
+get_transformer.py
+transformer
+Question_Generation_model.py
+data/*
