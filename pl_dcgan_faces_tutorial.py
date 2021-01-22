@@ -181,7 +181,7 @@ class DCGan_model(pl.LightningModule):
         ###########################
         # Forward pass real batch through D
         b_size = x.size(0)
-        label = torch.full((b_size,), self.real_label, dtype=torch.float) #, device=self.device
+        label = torch.full((b_size,), self.real_label, dtype=torch.float, device=self.device)
         # for multiple gpus
         label = label.type_as(x)
         output = self.discriminator(x).view(-1)
@@ -191,7 +191,7 @@ class DCGan_model(pl.LightningModule):
         ## Train with all-fake batch
 
         # label.fill_(self.fake_label) <--- need to create new object because of optimizer step
-        label = torch.full((b_size,), self.fake_label, dtype=torch.float)  # , device=self.device
+        label = torch.full((b_size,), self.fake_label, dtype=torch.float, device=self.device)
         label = label.type_as(x)
 
         # Generate fake image batch with G
@@ -211,12 +211,12 @@ class DCGan_model(pl.LightningModule):
         ###########################
         # Generate fake image batch with G
         b_size = x.size(0)
-        noise = torch.randn(b_size, self.hparams.nz, 1, 1)
+        noise = torch.randn(b_size, self.hparams.nz, 1, 1, device=self.device)
         noise = noise.type_as(x)
         fake = self.generator(noise)
 
         # fake labels are real for generator cost
-        label = torch.full((b_size,), self.real_label, dtype=torch.float)
+        label = torch.full((b_size,), self.real_label, dtype=torch.float, device=self.device)
         label = label.type_as(x)
 
         # Since we just updated D, perform another forward pass of all-fake batch through D
@@ -243,7 +243,7 @@ class DCGan_model(pl.LightningModule):
         z = self.fixed_noise.type_as(self.generator.main[0].weight)
         # show sampled images
         sample_imgs = self(z).detach()
-        plt.imshow(np.transpose(vutils.make_grid(sample_imgs, padding=2, normalize=True), (1, 2, 0)))
+        plt.imshow(np.transpose(vutils.make_grid(sample_imgs, padding=2, normalize=True).cpu().numpy(), (1, 2, 0)))  # !!!
         plt.show()
         # log sampled images if you specified logger
         # grid = vutils.make_grid(sample_imgs, padding=2, normalize=True)
@@ -263,12 +263,14 @@ class DCGan_model(pl.LightningModule):
             nn.init.normal_(m.weight.data, 1.0, 0.02)
             nn.init.constant_(m.bias.data, 0)
 
-
+# TO DO: add dataparallel
 if __name__ == '__main__':
     model = DCGan_model(hparams)
     dm = DCGanDataModule(hparams)
     dm.setup()
     dm.example_show()
-    trainer = pl.Trainer()
+    trainer = pl.Trainer(gpus=hparams['ngpu'],
+                         max_epochs=hparams['max_epochs'],
+                         )
     trainer.fit(model, dm)
 
